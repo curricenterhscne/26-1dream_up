@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>꿈키움 준비물 신청 · 강사용</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f6fa;
+  --card: #ffffff;
+  --accent: #1a56db;
+  --accent-light: #e8f0fe;
+  --success: #1a7a4a;
+  --success-bg: #e6f4ed;
+  --warn: #b45309;
+  --warn-bg: #fef3c7;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
+  --text: #1e1e2e;
+  --text-sub: #6b7280;
+  --border: #e5e7eb;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* 헤더 */
+.header{background:var(--accent);color:#fff;padding:20px 24px}
+.header-inner{max-width:760px;margin:0 auto}
+.header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.header p{font-size:13px;opacity:.8;margin-top:4px}
+
+.container{max-width:760px;margin:0 auto;padding:24px 16px 80px}
+
+/* 카드 */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+
+/* 로그인 */
+.login-wrap{display:flex;gap:10px;align-items:flex-end}
+.login-wrap input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:15px;outline:none;transition:border-color .15s;text-transform:uppercase;letter-spacing:1px}
+.login-wrap input:focus{border-color:var(--accent)}
+.btn{padding:11px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn:hover{background:#1446c0}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-danger{background:#dc2626}
+.btn-danger:hover{background:#b91c1c}
+.btn-ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn-ghost:hover{background:var(--accent-light)}
+.btn-success{background:#16a34a}
+.btn-success:hover{background:#15803d}
+
+/* 강좌 정보 배지 */
+.course-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.info-item{background:var(--bg);border-radius:8px;padding:12px}
+.info-item .label{font-size:11px;color:var(--text-sub);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.info-item .value{font-size:15px;font-weight:700}
+.budget-bar{background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px}
+.bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}
+.bar-track{height:8px;background:#e5e7eb;border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .4s}
+.bar-fill.over{background:#dc2626}
+
+/* 알림 */
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px}
+.alert-warn{background:var(--warn-bg);color:var(--warn)}
+.alert-success{background:var(--success-bg);color:var(--success)}
+.alert-danger{background:var(--danger-bg);color:var(--danger)}
+.alert-info{background:var(--accent-light);color:var(--accent)}
+
+/* 상태 뱃지 */
+.badge{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.badge-pending{background:#e5e7eb;color:#4b5563}
+.badge-ok{background:var(--success-bg);color:var(--success)}
+.badge-issue{background:var(--danger-bg);color:var(--danger)}
+.badge-closed{background:#f3f4f6;color:#9ca3af}
+
+/* 섹션 타이틀 */
+.section-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section-title .count{background:var(--accent);color:#fff;border-radius:99px;font-size:11px;padding:2px 8px}
+
+/* 품목 테이블 */
+.supply-table{width:100%;border-collapse:collapse;font-size:13px}
+.supply-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);color:var(--text-sub);font-weight:500;font-size:12px;letter-spacing:.3px}
+.supply-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.supply-table tr:last-child td{border-bottom:none}
+.supply-table tr:hover td{background:#f9fafb}
+.link-btn{display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-size:12px;text-decoration:none;background:var(--accent-light);padding:3px 9px;border-radius:6px}
+.link-btn:hover{text-decoration:underline}
+.link-broken{color:var(--danger);font-size:12px;background:var(--danger-bg);padding:3px 9px;border-radius:6px}
+.feedback-box{background:#fff9db;border:1px solid #fcd34d;border-radius:8px;padding:12px;margin-top:10px;font-size:13px;color:#92400e}
+
+/* 입력 폼 */
+.form-row{display:grid;gap:10px;margin-bottom:12px}
+.form-row.cols-2{grid-template-columns:1fr 1fr}
+.form-row.cols-3{grid-template-columns:2fr 1fr 1fr}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--text-sub);margin-bottom:5px}
+.form-group input,.form-group textarea,.form-group select{
+  width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:inherit;font-size:14px;outline:none;transition:border-color .15s;background:#fff
+}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group input.error{border-color:#dc2626}
+.form-group textarea{resize:vertical;min-height:60px}
+.link-check{margin-top:5px;font-size:12px;height:18px}
+.link-ok{color:var(--success)}
+.link-err{color:var(--danger)}
+
+.item-card{border:1.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;position:relative}
+.item-card .item-num{position:absolute;top:12px;left:14px;font-size:11px;font-weight:700;color:var(--text-sub)}
+.item-card .remove-btn{position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1}
+.item-card .remove-btn:hover{color:var(--danger)}
+.item-body{padding-left:28px}
+
+.total-bar{background:linear-gradient(135deg,#1e3a8a,#1a56db);color:#fff;border-radius:10px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.total-bar .label{font-size:13px;opacity:.8}
+.total-bar .amount{font-size:22px;font-weight:700}
+
+.actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+/* 로딩 */
+.loader{display:none;text-align:center;padding:40px;color:var(--text-sub);font-size:14px}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.hidden{display:none!important}
+.text-right{text-align:right}
+.text-sm{font-size:12px;color:var(--text-sub)}
+
+/* 상태 배너 */
+.status-banner{border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.status-banner.open{background:var(--success-bg);border:1px solid #bbf7d0}
+.status-banner.closed{background:var(--danger-bg);border:1px solid #fecaca}
+.status-banner.pending{background:var(--warn-bg);border:1px solid #fde68a}
+.status-banner .icon{font-size:22px}
+.status-banner .info h3{font-size:14px;font-weight:700}
+.status-banner .info p{font-size:12px;margin-top:2px;opacity:.8}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1>꿈키움 준비물 신청 시스템</h1>
+    <p>2026학년도 1학기 · 강사용</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 로그인 섹션 -->
+  <div id="loginSection">
+    <div class="card">
+      <div class="section-title">강좌코드 입력</div>
+      <p class="text-sm" style="margin-bottom:14px">담당 강좌의 코드를 입력하세요. 강좌코드는 대학 담당자에게 안내받을 수 있습니다.</p>
+      <div class="login-wrap">
+        <input type="text" id="courseCodeInput" placeholder="예: A001" maxlength="10"
+          onkeydown="if(event.key==='Enter')loadCourse()">
+        <button class="btn" onclick="loadCourse()">조회</button>
+      </div>
+      <div id="loginError" class="alert alert-danger" style="margin-top:12px;display:none"></div>
+    </div>
+    <div class="loader" id="loginLoader">
+      <div class="spinner"></div><br>강좌 정보를 불러오는 중...
+    </div>
+  </div>
+
+  <!-- 메인 섹션 -->
+  <div id="mainSection" class="hidden">
+
+    <!-- 강좌 상태 배너 -->
+    <div id="statusBanner" class="status-banner pending">
+      <span class="icon" id="statusIcon">📋</span>
+      <div class="info">
+        <h3 id="statusTitle">강좌 상태</h3>
+        <p id="statusDesc"></p>
+      </div>
+    </div>
+
+    <!-- 강좌 기본 정보 -->
+    <div class="card">
+      <div class="section-title">강좌 정보</div>
+      <div class="course-info">
+        <div class="info-item">
+          <div class="label">강좌명</div>
+          <div class="value" id="courseName">-</div>
+        </div>
+        <div class="info-item">
+          <div class="label">담당 강사</div>
+          <div class="value" id="profName">-</div>
+        </div>
+        <div class="info-item">
+          <div class="label">대학</div>
+          <div class="value" id="univName">-</div>
+        </div>
+        <div class="info-item">
+          <div class="label">강좌코드</div>
+          <div class="value" id="courseCodeLabel">-</div>
+        </div>
+      </div>
+
+      <!-- 예산 바 -->
+      <div class="budget-bar">
+        <div class="bar-header">
+          <span>예산 사용 현황</span>
+          <span id="budgetSummary" style="font-weight:700">-</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="barFill" style="width:0%"></div>
+        </div>
+        <div id="budgetNote" class="text-sm" style="margin-top:6px"></div>
+      </div>
+
+      <div id="courseAlerts"></div>
+    </div>
+
+    <!-- 피드백 -->
+    <div id="feedbackSection" class="hidden">
+      <div class="alert alert-warn">
+        <div>
+          <div style="font-weight:700;margin-bottom:4px">📢 담당자 피드백이 도착했습니다</div>
+          <div id="feedbackMessages"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 기존 신청 목록 -->
+    <div class="card" id="existingSection">
+      <div class="section-title">
+        신청된 준비물
+        <span class="count" id="supplyCount">0</span>
+      </div>
+      <div id="supplyList">
+        <p class="text-sm" style="text-align:center;padding:20px;color:#9ca3af">신청된 준비물이 없습니다.</p>
+      </div>
+      <div id="totalBar" class="total-bar hidden">
+        <div>
+          <div class="label">신청 합계</div>
+          <div class="amount" id="totalAmount">0원</div>
+        </div>
+        <div class="text-sm" style="opacity:.7;text-align:right">
+          가용 예산: <span id="budgetLabel">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 추가 신청 폼 -->
+    <div class="card" id="addFormSection">
+      <div class="section-title">준비물 추가 신청</div>
+      <div id="addAlert"></div>
+
+      <div id="itemsContainer"></div>
+
+      <button class="btn btn-ghost btn-sm" onclick="addItemForm()" style="margin-bottom:16px">
+        + 품목 추가
+      </button>
+
+      <div class="actions">
+        <button class="btn btn-success" onclick="submitAll()">제출하기</button>
+        <button class="btn btn-ghost" onclick="resetForm()">초기화</button>
+      </div>
+
+      <div class="loader" id="submitLoader">
+        <div class="spinner"></div><br>제출 중...
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn btn-ghost btn-sm" onclick="location.reload()">다른 강좌 조회</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ★ 배포 후 Apps Script 웹 앱 URL을 여기에 붙여넣으세요
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxjbaygQzxTA4fYzT1lw5weYCBGe-QJsPwb2mLdCS_puf4wm7LpLDL4JtcB5Lj1fWX4fQ/exec';
+
+let currentCourse = null;
+let currentSupplies = [];
+let itemCount = 0;
+
+// ─── 강좌 로드 ───
+async function loadCourse() {
+  const code = document.getElementById('courseCodeInput').value.trim().toUpperCase();
+  if (!code) { showLoginError('강좌코드를 입력해주세요.'); return; }
+
+  document.getElementById('loginLoader').style.display = 'block';
+  document.getElementById('loginError').style.display = 'none';
+
+  try {
+    const res = await api({ action: 'getCourse', courseCode: code });
+    if (!res.ok) { showLoginError(res.msg); return; }
+
+    currentCourse = res.course;
+    currentSupplies = res.supplies || [];
+
+    renderMain();
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('mainSection').classList.remove('hidden');
+  } catch(e) {
+    showLoginError('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+  } finally {
+    document.getElementById('loginLoader').style.display = 'none';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'flex';
+}
+
+// ─── 메인 렌더링 ───
+function renderMain() {
+  const c = currentCourse;
+
+  // 상태 배너
+  const statusMap = {
+    '개설예정': { cls: 'pending', icon: '📋', title: '수강신청 집계 중', desc: '4월 21일 이후 수강인원 및 예산이 확정됩니다.' },
+    '개설확정': { cls: 'open', icon: '✅', title: '강좌 개설 확정', desc: `수강인원 ${c.students}명 · 가용예산 ${fmt(c.budget)}원` },
+    '폐강':     { cls: 'closed', icon: '🚫', title: '폐강 처리된 강좌', desc: '수강신청 인원 미달(5명 미만)로 폐강되었습니다. 준비물 신청이 불가합니다.' },
+  };
+  const sm = statusMap[c.status] || statusMap['개설예정'];
+  const banner = document.getElementById('statusBanner');
+  banner.className = 'status-banner ' + sm.cls;
+  document.getElementById('statusIcon').textContent = sm.icon;
+  document.getElementById('statusTitle').textContent = sm.title;
+  document.getElementById('statusDesc').textContent = sm.desc;
+
+  // 강좌 정보
+  document.getElementById('courseName').textContent = c.courseName;
+  document.getElementById('profName').textContent = c.profName;
+  document.getElementById('univName').textContent = c.univName;
+  document.getElementById('courseCodeLabel').textContent = c.courseCode;
+
+  // 예산
+  renderBudget();
+
+  // 준비물 목록
+  renderSupplies();
+
+  // 폐강이면 추가 폼 숨김
+  if (c.status === '폐강') {
+    document.getElementById('addFormSection').style.display = 'none';
+  } else {
+    addItemForm();
+  }
+
+  // 피드백
+  renderFeedbacks();
+}
+
+function renderBudget() {
+  const c = currentCourse;
+  const totalCost = currentSupplies.reduce((s, r) => s + (Number(r.totalPrice) || 0), 0);
+  const budget = Number(c.budget) || 0;
+  const pct = budget > 0 ? Math.min((totalCost / budget) * 100, 100) : 0;
+  const over = totalCost > budget && budget > 0;
+
+  const fill = document.getElementById('barFill');
+  fill.style.width = pct + '%';
+  fill.className = 'bar-fill' + (over ? ' over' : '');
+
+  document.getElementById('budgetSummary').textContent =
+    budget > 0 ? `${fmt(totalCost)}원 / ${fmt(budget)}원` : '예산 미확정';
+  document.getElementById('budgetNote').textContent =
+    budget > 0
+      ? (over ? `⚠ 예산 초과 ${fmt(totalCost - budget)}원` : `잔여 ${fmt(budget - totalCost)}원`)
+      : '수강인원 확정 후 예산이 결정됩니다. (수강인원 × 30,000원)';
+
+  const alerts = document.getElementById('courseAlerts');
+  if (over) {
+    alerts.innerHTML = `<div class="alert alert-danger">예산을 초과하고 있습니다. 품목을 조정해주세요.</div>`;
+  } else {
+    alerts.innerHTML = '';
+  }
+}
+
+function renderSupplies() {
+  const list = document.getElementById('supplyList');
+  const count = currentSupplies.length;
+  document.getElementById('supplyCount').textContent = count;
+
+  if (count === 0) {
+    list.innerHTML = '<p class="text-sm" style="text-align:center;padding:20px;color:#9ca3af">신청된 준비물이 없습니다.</p>';
+    document.getElementById('totalBar').classList.add('hidden');
+    return;
+  }
+
+  const totalCost = currentSupplies.reduce((s, r) => s + (Number(r.totalPrice) || 0), 0);
+  document.getElementById('totalBar').classList.remove('hidden');
+  document.getElementById('totalAmount').textContent = fmt(totalCost) + '원';
+  document.getElementById('budgetLabel').textContent =
+    Number(currentCourse.budget) > 0 ? fmt(currentCourse.budget) + '원' : '미확정';
+
+  const statusLabel = { '검토전': 'badge-pending', '승인': 'badge-ok', '반려': 'badge-issue', '수정요청': 'badge-issue' };
+
+  list.innerHTML = `
+    <table class="supply-table">
+      <thead>
+        <tr>
+          <th>품명</th><th>수량</th><th>단가</th><th>합계</th><th>링크</th><th>상태</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${currentSupplies.map(s => `
+          <tr>
+            <td><b>${escHtml(s.itemName)}</b>${s.note ? `<br><span class="text-sm">${escHtml(s.note)}</span>` : ''}</td>
+            <td class="text-right">${s.qty}</td>
+            <td class="text-right">${fmt(s.unitPrice)}원</td>
+            <td class="text-right"><b>${fmt(s.totalPrice)}원</b></td>
+            <td>${s.link
+              ? `<a class="link-btn" href="${escHtml(s.link)}" target="_blank" rel="noopener">🔗 링크</a>`
+              : '<span class="text-sm" style="color:#9ca3af">없음</span>'
+            }</td>
+            <td><span class="badge ${statusLabel[s.status] || 'badge-pending'}">${escHtml(s.status)}</span></td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteItem('${s.rowId}')">삭제</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderFeedbacks() {
+  // 피드백은 서버에서 별도 요청 (여기서는 비고 필드로 대체)
+  const hasIssue = currentSupplies.some(s => s.status === '반려' || s.status === '수정요청');
+  if (hasIssue) {
+    document.getElementById('feedbackSection').classList.remove('hidden');
+    document.getElementById('feedbackMessages').innerHTML =
+      '일부 품목에 대해 검토 의견이 있습니다. 아래 목록에서 <b>반려/수정요청</b> 항목을 확인하고 수정해주세요.';
+  }
+}
+
+// ─── 품목 입력 폼 ───
+function addItemForm() {
+  itemCount++;
+  const id = 'item_' + itemCount;
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.id = id;
+  div.innerHTML = `
+    <span class="item-num">#${itemCount}</span>
+    <button class="remove-btn" onclick="removeItem('${id}')">×</button>
+    <div class="item-body">
+      <div class="form-row cols-3">
+        <div class="form-group">
+          <label>품명 *</label>
+          <input type="text" placeholder="예: A4 용지" data-field="itemName">
+        </div>
+        <div class="form-group">
+          <label>수량 *</label>
+          <input type="number" placeholder="1" min="1" data-field="qty" oninput="calcTotal(this)">
+        </div>
+        <div class="form-group">
+          <label>단가 (원)</label>
+          <input type="number" placeholder="0" min="0" data-field="unitPrice" oninput="calcTotal(this)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>쇼핑몰 링크</label>
+          <input type="url" placeholder="https://..." data-field="link" oninput="checkLink(this)">
+          <div class="link-check"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>비고 (용도, 수량 설명 등)</label>
+          <input type="text" placeholder="선택 사항" data-field="note">
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('itemsContainer').appendChild(div);
+}
+
+function removeItem(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function calcTotal(input) {
+  const card = input.closest('.item-card');
+  const qty = Number(card.querySelector('[data-field="qty"]').value) || 0;
+  const price = Number(card.querySelector('[data-field="unitPrice"]').value) || 0;
+}
+
+let linkTimers = {};
+function checkLink(input) {
+  const check = input.closest('.form-group').querySelector('.link-check');
+  const url = input.value.trim();
+  if (!url) { check.textContent = ''; return; }
+
+  check.textContent = '링크 확인 중...';
+  check.className = 'link-check';
+
+  clearTimeout(linkTimers[input.name]);
+  linkTimers[input.dataset.field + Date.now()] = setTimeout(() => {
+    // URL 형식 기본 검증
+    try {
+      new URL(url);
+      if (url.startsWith('http')) {
+        check.textContent = '✓ 링크 형식 확인됨';
+        check.className = 'link-check link-ok';
+      } else {
+        check.textContent = '⚠ http:// 또는 https://로 시작해야 합니다';
+        check.className = 'link-check link-err';
+      }
+    } catch {
+      check.textContent = '✗ 올바른 URL 형식이 아닙니다';
+      check.className = 'link-check link-err';
+    }
+  }, 600);
+}
+
+// ─── 제출 ───
+async function submitAll() {
+  const cards = document.querySelectorAll('#itemsContainer .item-card');
+  if (cards.length === 0) {
+    showAddAlert('추가할 품목을 입력해주세요.', 'danger');
+    return;
+  }
+
+  const items = [];
+  let hasError = false;
+
+  cards.forEach((card, i) => {
+    const itemName = card.querySelector('[data-field="itemName"]').value.trim();
+    const qty      = card.querySelector('[data-field="qty"]').value.trim();
+    const unitPrice = card.querySelector('[data-field="unitPrice"]').value.trim();
+    const link     = card.querySelector('[data-field="link"]').value.trim();
+    const note     = card.querySelector('[data-field="note"]').value.trim();
+
+    if (!itemName) {
+      card.querySelector('[data-field="itemName"]').classList.add('error');
+      hasError = true;
+      return;
+    }
+    if (!qty || Number(qty) < 1) {
+      card.querySelector('[data-field="qty"]').classList.add('error');
+      hasError = true;
+      return;
+    }
+
+    // 링크 형식 검증
+    if (link) {
+      try { new URL(link); } catch {
+        card.querySelector('[data-field="link"]').classList.add('error');
+        hasError = true;
+        return;
+      }
+    }
+
+    items.push({ itemName, qty: Number(qty), unitPrice: Number(unitPrice) || 0, link, note });
+  });
+
+  if (hasError) {
+    showAddAlert('입력값을 확인해주세요. 품명과 수량은 필수입니다.', 'danger');
+    return;
+  }
+
+  // 예산 초과 시 제출 차단
+  const totalNew = items.reduce((s, i) => s + (i.qty * i.unitPrice), 0);
+  const totalExisting = currentSupplies.reduce((s, r) => s + (Number(r.totalPrice) || 0), 0);
+  const budget = Number(currentCourse.budget) || 0;
+
+  if (budget > 0 && (totalExisting + totalNew) > budget) {
+    const over = fmt(totalExisting + totalNew - budget);
+    alert(
+      `예산을 초과하여 제출할 수 없습니다.\n\n` +
+      `가용 예산: ${fmt(budget)}원\n` +
+      `현재 신청 합계: ${fmt(totalExisting + totalNew)}원\n` +
+      `초과 금액: ${over}원\n\n` +
+      `품목 금액을 조정하신 후 다시 시도해주세요.\n\n` +
+      `문의: 충남교육청 중등교육과\n☎ 041-640-7221`
+    );
+    return;
+  }
+
+  document.getElementById('submitLoader').style.display = 'block';
+  document.getElementById('addAlert').innerHTML = '';
+
+  try {
+    const res = await api({ action: 'submitSupply', courseCode: currentCourse.courseCode, items });
+    if (res.ok) {
+      // 제출 성공 → 서버에서 최신 데이터를 다시 받아 현황 화면 갱신
+      const refreshed = await api({ action: 'getCourse', courseCode: currentCourse.courseCode });
+      if (refreshed.ok) {
+        currentCourse = refreshed.course;
+        currentSupplies = refreshed.supplies || [];
+      }
+      // 폼 초기화
+      document.getElementById('itemsContainer').innerHTML = '';
+      itemCount = 0;
+      addItemForm();
+      // 현황 재렌더링
+      renderSupplies();
+      renderBudget();
+      showAddAlert(`${items.length}개 품목이 제출되었습니다.`, 'success');
+      // 현황 카드로 스크롤
+      document.getElementById('existingSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      showAddAlert(res.msg, 'danger');
+    }
+  } catch(e) {
+    showAddAlert('제출에 실패했습니다.', 'danger');
+  } finally {
+    document.getElementById('submitLoader').style.display = 'none';
+  }
+}
+
+async function deleteItem(rowId) {
+  if (!confirm('이 품목을 삭제하시겠습니까?')) return;
+  const res = await api({ action: 'deleteSupply', rowId });
+  if (res.ok) {
+    currentSupplies = currentSupplies.filter(s => s.rowId !== rowId);
+    renderSupplies();
+    renderBudget();
+  } else {
+    alert(res.msg);
+  }
+}
+
+function resetForm() {
+  document.getElementById('itemsContainer').innerHTML = '';
+  itemCount = 0;
+  addItemForm();
+}
+
+function showAddAlert(msg, type) {
+  document.getElementById('addAlert').innerHTML =
+    `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+// ─── 유틸 ───
+async function api(payload) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('ko-KR');
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
