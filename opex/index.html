@@ -147,6 +147,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* 전체화면 로딩 오버레이 */
+.overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(2px)}
+.overlay.hidden{display:none!important}
+.overlay .spin-lg{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.overlay .ov-title{font-size:15px;font-weight:700;color:var(--text)}
+.overlay .ov-sub{font-size:13px;color:var(--sub);text-align:center;line-height:1.6}
+.overlay .ov-note{font-size:11px;color:#9ca3af;margin-top:4px}
+
 /* 로그인 탭 */
 .login-tabs{display:flex;gap:0;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}
 .login-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:var(--sub);transition:.15s;border:none;font-family:inherit}
@@ -162,9 +170,34 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .hidden{display:none!important}
 .tr{text-align:right}
 .tsm{font-size:12px;color:var(--sub)}
+
+/* 신청된 준비물 카드 */
+.supply-item-card{border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.si-view{padding:12px 14px}
+.si-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px}
+.si-left{display:flex;align-items:flex-start;gap:10px}
+.si-num{background:var(--accent);color:#fff;border-radius:99px;width:22px;height:22px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.si-name{font-size:13px;font-weight:700}
+.si-right{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.si-prices{display:flex;gap:0;background:var(--bg);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.si-price-cell{flex:1;padding:7px 10px;text-align:center;border-right:1px solid var(--border)}
+.si-price-cell:last-child{border-right:none}
+.si-total{background:var(--accent-l)}
+.si-plbl{font-size:10px;color:var(--sub);margin-bottom:2px}
+.si-pval{font-size:12px;font-weight:700}
+.si-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.si-edit{padding:14px;background:#fafafa;border-top:1px solid var(--border)}
 </style>
 </head>
 <body>
+
+<!-- 전체화면 로딩 오버레이 -->
+<div class="overlay hidden" id="overlay">
+  <div class="spin-lg"></div>
+  <div class="ov-title" id="ovTitle">처리 중...</div>
+  <div class="ov-sub" id="ovSub">Google 서버와 통신 중입니다.<br>잠시만 기다려주세요.</div>
+  <div class="ov-note">※ Google Sheets 연동으로 인해 10~20초 소요될 수 있습니다</div>
+</div>
 
 <div class="header">
   <div class="header-inner">
@@ -327,6 +360,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <!-- 품목 추가 폼 -->
     <div class="card" id="addFormSec">
       <div class="sec-title">준비물 추가 입력</div>
+      <!-- 승인 잠금 배너 -->
+      <div id="approvedLockBanner" class="hidden">
+        <div class="alert alert-ok" style="margin-bottom:12px">
+          <div style="font-weight:700;margin-bottom:3px">🔒 승인 완료 — 입력이 잠겼습니다</div>
+          <div>승인된 항목이 있어 추가 입력 및 수정이 제한됩니다. 변경이 필요한 경우 충남교육청 중등교육과 (041-640-7221)로 문의해주세요.</div>
+        </div>
+      </div>
       <div id="addAlert"></div>
       <div id="itemsContainer"></div>
       <button class="btn btn-ghost btn-sm" onclick="addItem()" style="margin-bottom:14px">+ 품목 추가</button>
@@ -367,7 +407,8 @@ function switchLoginTab(tab) {
 async function load() {
   const code = document.getElementById('codeInput').value.trim().toUpperCase();
   if (!code) { showLoginErr('강좌코드를 입력해주세요.'); return; }
-  show('loginLoader'); hide('loginErr');
+  showOverlay('강좌 정보를 불러오는 중...', '강좌코드를 확인하고 준비물 현황을 조회합니다.');
+  hide('loginErr');
   try {
     const res = await api({ action: 'getCourse', courseCode: code });
     if (!res.ok) { showLoginErr(res.msg); return; }
@@ -377,14 +418,15 @@ async function load() {
     renderMain(res.delivery);
     hide('loginSec'); show('mainSec');
   } catch(e) { showLoginErr('서버 연결 실패. 잠시 후 다시 시도해주세요.'); }
-  finally { hide('loginLoader'); }
+  finally { hideOverlay(); }
 }
 
 // ── 담당자: 대학코드로 강좌 목록 조회 ──────────────
 async function loadUniv() {
   const code = document.getElementById('univCodeInput').value.trim().toUpperCase();
   if (!code) { showLoginErr('대학코드를 입력해주세요.'); return; }
-  show('loginLoader'); hide('loginErr');
+  showOverlay('대학 강좌 목록 조회 중...', '소속 강좌 전체를 불러옵니다.');
+  hide('loginErr');
   try {
     const res = await api({ action: 'getUnivCourses', univCode: code });
     if (!res.ok) { showLoginErr(res.msg); return; }
@@ -405,14 +447,14 @@ async function loadUniv() {
     });
     show('courseSelectWrap');
   } catch(e) { showLoginErr('서버 연결 실패.'); }
-  finally { hide('loginLoader'); }
+  finally { hideOverlay(); }
 }
 
 // ── 담당자: 강좌 선택 후 로드 ──────────────────────
 async function loadSelectedCourse() {
   const code = document.getElementById('courseSelect').value;
   if (!code) return;
-  show('loginLoader');
+  showOverlay('강좌 상세 불러오는 중...', '준비물 신청 현황과 배송지 정보를 조회합니다.');
   try {
     const res = await api({ action: 'getCourse', courseCode: code });
     if (!res.ok) { showLoginErr(res.msg); return; }
@@ -425,7 +467,7 @@ async function loadSelectedCourse() {
     show('mainSec');
     show('managerBanner');
   } catch(e) { showLoginErr('서버 연결 실패.'); }
-  finally { hide('loginLoader'); }
+  finally { hideOverlay(); }
 }
 
 // ── 담당자: 강좌 목록으로 돌아가기 ────────────────
@@ -528,32 +570,232 @@ function renderSupplyList() {
 
   const sLabel = { '검토전':'b-gray', '승인':'b-ok', '반려':'b-err', '수정요청':'b-warn' };
 
-  list.innerHTML = `
-    <div style="overflow-x:auto">
-    <table class="supply-table">
-      <thead><tr>
-        <th>품명</th><th>수량</th><th>단가</th><th>소계</th><th>배송비</th><th>합계</th><th>구매방식</th><th>링크/견적서</th><th>상태</th><th></th>
-      </tr></thead>
-      <tbody>
-        ${supplies.map(s => `
-          <tr>
-            <td><b>${esc(s.itemName)}</b>${s.note ? `<br><span class="tsm">${esc(s.note)}</span>` : ''}</td>
-            <td class="tr">${s.qty}</td>
-            <td class="tr">${fmt(s.unitPrice)}</td>
-            <td class="tr">${fmt(s.subTotal)}</td>
-            <td class="tr">${fmt(s.shipping)}</td>
-            <td class="tr"><b>${fmt(s.subTotal + s.shipping)}</b></td>
-            <td><span class="badge ${s.purchaseType==='견적서'?'b-warn':'b-gray'}">${esc(s.purchaseType||'쇼핑몰')}</span></td>
-            <td>
-              ${s.purchaseType === '견적서'
-                ? (s.estimateUrl ? `<a class="est-link" href="${esc(s.estimateUrl)}" target="_blank">📄 견적서</a>` : '<span class="tsm" style="color:#9ca3af">미첨부</span>')
-                : (s.link ? `<a class="link-btn" href="${esc(s.link)}" target="_blank">🔗 링크</a>` : '<span class="tsm" style="color:#9ca3af">없음</span>')}
-            </td>
-            <td><span class="badge ${sLabel[s.status]||'b-gray'}">${esc(s.status)}</span></td>
-            <td><button class="btn btn-err btn-sm" onclick="delItem('${s.rowId}')">삭제</button></td>
-          </tr>`).join('')}
-      </tbody>
-    </table></div>`;
+  // 승인된 항목이 하나라도 있으면 추가 폼 잠금
+  const hasApproved = supplies.some(s => s.status === '승인');
+  const lockBanner = document.getElementById('approvedLockBanner');
+  if (hasApproved) {
+    lockBanner.classList.remove('hidden');
+    document.getElementById('itemsContainer').innerHTML = '';
+    document.querySelectorAll('#addFormSec button, #addFormSec input, #addFormSec textarea, #addFormSec select')
+      .forEach(el => { el.disabled = true; el.style.opacity = '0.4'; });
+  } else {
+    lockBanner.classList.add('hidden');
+  }
+
+  // 품목 카드 목록으로 렌더링 (테이블 대신 카드 방식 — 수정 모드 토글이 용이)
+  list.innerHTML = supplies.map((s, idx) => {
+    const approved = s.status === '승인';
+    const rowId = s.rowId;
+    const isShop = (s.purchaseType !== '견적서');
+    return `
+    <div class="supply-item-card" id="scard_${rowId}">
+      <!-- 보기 모드 -->
+      <div id="sview_${rowId}" class="si-view">
+        <div class="si-header">
+          <div class="si-left">
+            <span class="si-num">${idx + 1}</span>
+            <div>
+              <div class="si-name">${esc(s.itemName)}</div>
+              ${s.note ? `<div class="tsm" style="margin-top:2px">${esc(s.note)}</div>` : ''}
+            </div>
+          </div>
+          <div class="si-right">
+            <span class="badge ${s.purchaseType==='견적서'?'b-warn':'b-gray'}">${esc(s.purchaseType||'쇼핑몰')}</span>
+            <span class="badge ${sLabel[s.status]||'b-gray'}">${esc(s.status)}</span>
+            ${approved ? '<span class="tsm" style="color:var(--ok);font-size:11px">🔒</span>' : ''}
+          </div>
+        </div>
+        <div class="si-prices">
+          <div class="si-price-cell"><div class="si-plbl">수량</div><div class="si-pval">${s.qty}</div></div>
+          <div class="si-price-cell"><div class="si-plbl">단가</div><div class="si-pval">${fmt(s.unitPrice)}원</div></div>
+          <div class="si-price-cell"><div class="si-plbl">소계</div><div class="si-pval">${fmt(s.subTotal)}원</div></div>
+          <div class="si-price-cell"><div class="si-plbl">배송비</div><div class="si-pval">${fmt(s.shipping)}원</div></div>
+          <div class="si-price-cell si-total"><div class="si-plbl">합계</div><div class="si-pval">${fmt((Number(s.subTotal)||0)+(Number(s.shipping)||0))}원</div></div>
+        </div>
+        <div class="si-footer">
+          <div>
+            ${isShop
+              ? (s.link ? `<a class="link-btn" href="${esc(s.link)}" target="_blank">🔗 쇼핑몰 링크</a>` : '<span class="tsm" style="color:#9ca3af">링크 없음</span>')
+              : (s.estimateUrl ? `<a class="est-link" href="${esc(s.estimateUrl)}" target="_blank">📄 견적서 보기</a>` : '<span class="tsm" style="color:#9ca3af">견적서 미첨부</span>')}
+          </div>
+          <div style="display:flex;gap:6px">
+            ${approved ? '' : `<button class="btn btn-ghost btn-sm" onclick="startEdit('${rowId}')">✏ 수정</button>`}
+            ${approved ? '' : `<button class="btn btn-err btn-sm" onclick="delItem('${rowId}')">삭제</button>`}
+          </div>
+        </div>
+      </div>
+
+      <!-- 수정 모드 -->
+      <div id="sedit_${rowId}" class="si-edit hidden">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px">✏ ${idx+1}번 품목 수정</div>
+
+        <div class="form-group">
+          <label>품명 <span class="req">*</span></label>
+          <input type="text" id="ef_name_${rowId}" value="${esc(s.itemName)}">
+        </div>
+
+        <div class="price-row">
+          <div class="form-group">
+            <label>수량 <span class="req">*</span></label>
+            <input type="number" id="ef_qty_${rowId}" value="${s.qty}" min="1">
+          </div>
+          <div class="form-group">
+            <label>단가 (원)</label>
+            <input type="number" id="ef_unit_${rowId}" value="${s.unitPrice||0}" min="0">
+          </div>
+          <div class="form-group" id="ef_shipwrap_${rowId}" ${!isShop?'style="display:none"':''}>
+            <label>배송비 (원)</label>
+            <input type="number" id="ef_ship_${rowId}" value="${s.shipping||0}" min="0">
+            <div class="ship-note">없으면 0 입력</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:10px">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button class="type-btn ${isShop?'active-shop':''}" id="etb_shop_${rowId}"
+              onclick="setEditType('${rowId}','쇼핑몰')">🛒 쇼핑몰</button>
+            <button class="type-btn ${!isShop?'active-est':''}" id="etb_est_${rowId}"
+              onclick="setEditType('${rowId}','견적서')">📄 견적서</button>
+          </div>
+
+          <div id="ef_shopzone_${rowId}" ${!isShop?'style="display:none"':''}>
+            <div class="form-group">
+              <label>쇼핑몰 링크</label>
+              <input type="url" id="ef_link_${rowId}" value="${esc(s.link||'')}" placeholder="https://..." oninput="chkLink(this)">
+              <div class="link-check"></div>
+            </div>
+          </div>
+
+          <div id="ef_estzone_${rowId}" ${isShop?'style="display:none"':''}>
+            <label style="font-size:12px;font-weight:500;color:var(--sub);display:block;margin-bottom:4px">견적서 이미지 교체</label>
+            ${s.estimateUrl ? `<div style="margin-bottom:6px"><a class="est-link" href="${esc(s.estimateUrl)}" target="_blank">📄 현재 견적서 보기</a></div>` : ''}
+            <div class="est-zone" onclick="document.getElementById('ef_file_${rowId}').click()">
+              <input type="file" id="ef_file_${rowId}" accept="image/*,.pdf" onchange="previewEst(this,'ef_prev_${rowId}')">
+              <div id="ef_prev_${rowId}">클릭하여 새 파일 선택 (선택 안 하면 기존 유지)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>비고</label>
+          <input type="text" id="ef_note_${rowId}" value="${esc(s.note||'')}" placeholder="색상, 상품선택사항 등 세부사항 기재">
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-ok btn-sm" onclick="saveEdit('${rowId}')">저장</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelEdit('${rowId}')">취소</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 합계 요약 바
+  document.getElementById('totalAmt').textContent = fmt(total) + '원';
+}
+
+// ── 인라인 수정 제어 ────────────────────────────────
+function startEdit(rowId) {
+  document.getElementById('sview_' + rowId).classList.add('hidden');
+  document.getElementById('sedit_' + rowId).classList.remove('hidden');
+}
+
+function cancelEdit(rowId) {
+  document.getElementById('sedit_' + rowId).classList.add('hidden');
+  document.getElementById('sview_' + rowId).classList.remove('hidden');
+}
+
+function setEditType(rowId, type) {
+  const isShop = type === '쇼핑몰';
+  document.getElementById('etb_shop_' + rowId).className = 'type-btn' + (isShop ? ' active-shop' : '');
+  document.getElementById('etb_est_'  + rowId).className = 'type-btn' + (!isShop ? ' active-est' : '');
+  document.getElementById('ef_shopzone_'  + rowId).style.display = isShop ? '' : 'none';
+  document.getElementById('ef_estzone_'   + rowId).style.display = isShop ? 'none' : '';
+  document.getElementById('ef_shipwrap_'  + rowId).style.display = isShop ? '' : 'none';
+}
+
+function previewEst(input, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const prev = document.getElementById(previewId);
+  prev.textContent = '✓ ' + file.name;
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'max-height:120px;margin-top:6px;border-radius:4px;display:block';
+      prev.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+async function saveEdit(rowId) {
+  const s = supplies.find(x => x.rowId === rowId);
+  if (!s) return;
+
+  const itemName = document.getElementById('ef_name_' + rowId).value.trim();
+  const qty      = Number(document.getElementById('ef_qty_'  + rowId).value) || 0;
+  const unitPrice= Number(document.getElementById('ef_unit_' + rowId).value) || 0;
+  const shipping = Number(document.getElementById('ef_ship_' + rowId)?.value) || 0;
+  const note     = document.getElementById('ef_note_' + rowId).value.trim();
+  const isShop   = document.getElementById('etb_shop_' + rowId).classList.contains('active-shop');
+  const purchaseType = isShop ? '쇼핑몰' : '견적서';
+  const link     = isShop ? document.getElementById('ef_link_' + rowId).value.trim() : '';
+
+  if (!itemName) { alert('품명을 입력해주세요.'); return; }
+  if (qty < 1)   { alert('수량을 입력해주세요.'); return; }
+
+  // 예산 초과 체크 (이 항목 제외한 나머지 + 수정값)
+  const budget = Number(course.budget) || 0;
+  if (budget > 0) {
+    const otherTotal = supplies
+      .filter(x => x.rowId !== rowId)
+      .reduce((sum, x) => sum + (Number(x.subTotal)||0) + (Number(x.shipping)||0), 0);
+    const thisTotal = qty * unitPrice + shipping;
+    if (otherTotal + thisTotal > budget) {
+      alert(
+        `예산을 초과하여 저장할 수 없습니다.\n\n` +
+        `가용 예산: ${fmt(budget)}원\n` +
+        `다른 항목 합계: ${fmt(otherTotal)}원\n` +
+        `이 항목: ${fmt(thisTotal)}원\n` +
+        `합계: ${fmt(otherTotal + thisTotal)}원 (${fmt(otherTotal + thisTotal - budget)}원 초과)\n\n` +
+        `문의: 충남교육청 중등교육과  ☎ 041-640-7221`
+      );
+      return;
+    }
+  }
+
+  showOverlay('수정 내용 저장 중...', '변경 사항을 서버에 반영합니다.');
+  try {
+    // 변경된 필드들 순차 업데이트
+    const fields = [
+      ['품명', itemName], ['수량', qty], ['단가', unitPrice],
+      ['배송비', shipping], ['비고', note], ['구매방식', purchaseType],
+    ];
+    if (isShop) fields.push(['쇼핑몰링크', link]);
+
+    for (const [field, value] of fields) {
+      await api({ action: 'updateSupply', rowId, field, value });
+    }
+
+    // 견적서 새 파일이 있으면 업로드
+    if (!isShop) {
+      const fileInput = document.getElementById('ef_file_' + rowId);
+      if (fileInput && fileInput.files[0]) {
+        updateOverlay('견적서 이미지 업로드 중...', '');
+        // rowNum은 모르지만 rowId로 폴백 검색 처리됨
+        await uploadEstimate(rowId, fileInput.files[0], null, null);
+      }
+    }
+
+    // 최신 데이터로 갱신
+    updateOverlay('화면 갱신 중...', '');
+    const refreshed = await api({ action: 'getCourse', courseCode: course.courseCode });
+    if (refreshed.ok) { course = refreshed.course; supplies = refreshed.supplies || []; }
+    renderSupplyList(); renderBudget();
+  } catch(e) { alert('저장 실패. 다시 시도해주세요.'); }
+  finally { hideOverlay(); }
 }
 
 function renderFeedback() {
@@ -601,6 +843,7 @@ async function saveDelivery() {
   });
   if (!ok) { document.getElementById('deliveryMsg').textContent = '필수 항목을 입력해주세요.'; document.getElementById('deliveryMsg').style.color = '#dc2626'; return; }
 
+  showOverlay('배송지 저장 중...', '입력하신 배송지 정보를 저장합니다.');
   const res = await api({
     action: 'submitDelivery', courseCode: course.courseCode,
     address:   document.getElementById('dAddress').value.trim(),
@@ -609,6 +852,7 @@ async function saveDelivery() {
     phone:     document.getElementById('dPhone').value.trim(),
     memo:      document.getElementById('dMemo').value.trim(),
   });
+  hideOverlay();
   const msg = document.getElementById('deliveryMsg');
   if (res.ok) { msg.textContent = '✓ ' + res.msg; msg.style.color = '#16a34a'; }
   else { msg.textContent = res.msg; msg.style.color = '#dc2626'; }
@@ -723,6 +967,11 @@ function chkLink(input) {
 
 // ── 제출 ───────────────────────────────────────────
 async function submitAll() {
+  // 승인 항목이 있으면 제출 차단
+  if (supplies.some(s => s.status === '승인')) {
+    showAddAlert('승인된 항목이 있어 제출이 제한됩니다. 충남교육청 중등교육과(041-640-7221)로 문의해주세요.', 'err');
+    return;
+  }
   const cards = document.querySelectorAll('#itemsContainer .item-card');
   if (!cards.length) { showAddAlert('추가할 품목을 입력해주세요.', 'err'); return; }
 
@@ -774,7 +1023,7 @@ async function submitAll() {
     return;
   }
 
-  show('submitLoader');
+  showOverlay('준비물 제출 중...', '입력하신 품목을 저장합니다.');
   document.getElementById('addAlert').innerHTML = '';
 
   try {
@@ -789,6 +1038,10 @@ async function submitAll() {
     const rowIds = res.rowIds || [];
     const rowNums = res.rowNums || {};
     const urlColIdx = res.urlColIdx || 0;
+    const estItems = items.filter((item, idx) => item.purchaseType === '견적서' && item._card.querySelector('input[type=file]')?.files[0]);
+    if (estItems.length > 0) {
+      updateOverlay('견적서 이미지 업로드 중...', `견적서 ${estItems.length}개를 Drive에 저장합니다.\n파일 크기에 따라 시간이 걸릴 수 있습니다.`);
+    }
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
       if (item.purchaseType === '견적서') {
@@ -800,6 +1053,7 @@ async function submitAll() {
     }
 
     // 갱신
+    updateOverlay('화면 갱신 중...', '최신 신청 현황을 불러옵니다.');
     const refreshed = await api({ action: 'getCourse', courseCode: course.courseCode });
     if (refreshed.ok) { course = refreshed.course; supplies = refreshed.supplies || []; }
     document.getElementById('itemsContainer').innerHTML = '';
@@ -808,7 +1062,7 @@ async function submitAll() {
     showAddAlert(`${items.length}개 품목이 제출되었습니다.`, 'ok');
     document.getElementById('supplyListSec').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(e) { showAddAlert('제출 실패. 다시 시도해주세요.', 'err'); }
-  finally { hide('submitLoader'); }
+  finally { hideOverlay(); }
 }
 
 async function uploadEstimate(rowId, file, rowNum, urlColIdx) {
@@ -851,6 +1105,18 @@ function showAddAlert(msg, type) {
 }
 
 // ── 유틸 ───────────────────────────────────────────
+function showOverlay(title, sub) {
+  document.getElementById('ovTitle').textContent = title;
+  document.getElementById('ovSub').textContent = sub || 'Google 서버와 통신 중입니다.\n잠시만 기다려주세요.';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+function updateOverlay(title, sub) {
+  document.getElementById('ovTitle').textContent = title;
+  if (sub) document.getElementById('ovSub').textContent = sub;
+}
+function hideOverlay() {
+  document.getElementById('overlay').classList.add('hidden');
+}
 async function api(payload) {
   const res = await fetch(SCRIPT_URL, {
     method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload),
