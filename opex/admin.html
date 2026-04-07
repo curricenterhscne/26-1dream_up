@@ -559,7 +559,7 @@ function buildCard(c) {
           <div class="cc-meta">
             <span>📌 ${esc(c.courseCode)}</span>
             ${c.univName?`<span>🏫 ${esc(c.univName)}</span>`:''}
-            <span>👤 ${esc(c.profName||'')}</span>
+            <span>👤 ${esc(c.profName||'')}${c.profPhone ? ` · ☎ ${esc(c.profPhone)}` : ''}</span>
             <span>👥 ${c.students||'미확정'}명</span>
           </div>
         </div>
@@ -675,7 +675,7 @@ async function sendFb(code) {
   showOverlay('피드백 발송 중...', '강사 및 대학 담당자에게 이메일을 발송합니다.');
   const res = await api({ action: 'sendFeedback', courseCode: code, message: msg, adminKey: loginCode });
   hideOverlay();
-  if (res.ok) { document.getElementById('fb_' + code).value = ''; alert('피드백 발송 완료 (강사 + 대학 담당자 동시 발송)'); }
+  if (res.ok) { document.getElementById('fb_' + code).value = ''; alert('피드백 발송 완료\n대학 담당자에게 이메일이 발송되었습니다.\n(이메일 본문에 강사 연락처가 포함됩니다)'); }
   else alert(res.msg);
 }
 
