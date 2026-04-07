@@ -473,9 +473,9 @@ async function loadSelectedCourse() {
 // ── 담당자: 강좌 목록으로 돌아가기 ────────────────
 function backToUnivList() {
   course = null; supplies = []; itemCount = 0;
+  document.getElementById('itemsContainer').innerHTML = '';
   hide('mainSec'); hide('managerBanner');
   show('loginSec');
-  // 드롭다운 초기화
   document.getElementById('courseSelect').value = '';
 }
 
@@ -500,8 +500,14 @@ function renderMain(delivery) {
   document.getElementById('noSupplyChk').checked = course.noSupply;
   applyNoSupply(course.noSupply, false);
 
-  if (course.status === '폐강') hide('addFormSec');
-  else if (!course.noSupply) addItem();
+  if (course.status === '폐강') {
+    hide('addFormSec');
+  } else if (!course.noSupply) {
+    // 폼 완전 초기화 후 빈 항목 1개만 추가
+    document.getElementById('itemsContainer').innerHTML = '';
+    itemCount = 0;
+    addItem();
+  }
 }
 
 function renderStatus() {
@@ -576,6 +582,7 @@ function renderSupplyList() {
   if (hasApproved) {
     lockBanner.classList.remove('hidden');
     document.getElementById('itemsContainer').innerHTML = '';
+    itemCount = 0;  // ← 카운터 초기화
     document.querySelectorAll('#addFormSec button, #addFormSec input, #addFormSec textarea, #addFormSec select')
       .forEach(el => { el.disabled = true; el.style.opacity = '0.4'; });
   } else {
