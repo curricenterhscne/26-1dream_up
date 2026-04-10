@@ -724,6 +724,7 @@ function previewEst(input, previewId) {
   const file = input.files[0];
   if (!file) return;
   const prev = document.getElementById(previewId);
+  if (!prev) return;  // 요소 없으면 무시
   prev.textContent = '✓ ' + file.name;
   if (file.type.startsWith('image/')) {
     const reader = new FileReader();
@@ -791,15 +792,31 @@ async function saveEdit(rowId) {
       const fileInput = document.getElementById('ef_file_' + rowId);
       if (fileInput && fileInput.files[0]) {
         updateOverlay('견적서 이미지 업로드 중...', '');
-        // rowNum은 모르지만 rowId로 폴백 검색 처리됨
-        await uploadEstimate(rowId, fileInput.files[0], null, null);
+        try {
+          const url = await uploadEstimate(rowId, fileInput.files[0], null, null);
+          // 업로드 성공 시 클라이언트 배열에 URL 직접 반영
+          const target = supplies.find(s => s.rowId === rowId);
+          if (target && url) target.estimateUrl = url;
+        } catch(uploadErr) {
+          console.error('견적서 업로드 실패:', uploadErr);
+        }
       }
     }
 
-    // 최신 데이터로 갱신
-    updateOverlay('화면 갱신 중...', '');
-    const refreshed = await api({ action: 'getCourse', courseCode: course.courseCode });
-    if (refreshed.ok) { course = refreshed.course; supplies = refreshed.supplies || []; }
+    // 클라이언트 supplies 배열 직접 업데이트 (서버 재조회 없음)
+    const target = supplies.find(s => s.rowId === rowId);
+    if (target) {
+      target.itemName     = itemName;
+      target.qty          = qty;
+      target.unitPrice    = unitPrice;
+      target.subTotal     = qty * unitPrice;
+      target.shipping     = shipping;
+      target.totalPrice   = qty * unitPrice + shipping;
+      target.note         = note;
+      target.purchaseType = purchaseType;
+      if (isShop) { target.link = link; target.estimateUrl = target.estimateUrl || ''; }
+      else        { target.link = ''; }
+    }
     renderSupplyList(); renderBudget();
   } catch(e) { alert('저장 실패. 다시 시도해주세요.'); }
   finally { hideOverlay(); }
@@ -912,7 +929,7 @@ function addItem() {
     <div id="${id}_estZone" class="hidden">
       <label style="font-size:12px;font-weight:500;color:var(--sub);display:block;margin-bottom:4px">견적서 이미지 첨부 <span class="req">*</span></label>
       <div class="est-zone" onclick="document.getElementById('${id}_file').click()">
-        <input type="file" id="${id}_file" accept="image/*,.pdf" onchange="previewEst(this,'${id}')">
+        <input type="file" id="${id}_file" accept="image/*,.pdf" onchange="previewEstNew(this,'${id}')">
         <div id="${id}_estPlaceholder">클릭하여 파일 선택 (이미지 또는 PDF)</div>
         <img id="${id}_estPreview" class="est-preview hidden">
         <div id="${id}_estName" class="est-name"></div>
@@ -939,17 +956,18 @@ function setType(btn, cardId) {
   document.getElementById(cardId + '_shipWrap').classList.toggle('hidden', type !== '쇼핑몰');
 }
 
-function previewEst(input, cardId) {
+function previewEstNew(input, cardId) {
   const file = input.files[0];
   if (!file) return;
-  document.getElementById(cardId + '_estName').textContent = '✓ ' + file.name;
-  document.getElementById(cardId + '_estPlaceholder').textContent = '파일 선택됨 (클릭하여 변경)';
+  const nameEl = document.getElementById(cardId + '_estName');
+  const placeholderEl = document.getElementById(cardId + '_estPlaceholder');
+  if (nameEl) nameEl.textContent = '✓ ' + file.name;
+  if (placeholderEl) placeholderEl.textContent = '파일 선택됨 (클릭하여 변경)';
   if (file.type.startsWith('image/')) {
     const reader = new FileReader();
     reader.onload = e => {
       const img = document.getElementById(cardId + '_estPreview');
-      img.src = e.target.result;
-      img.classList.remove('hidden');
+      if (img) { img.src = e.target.result; img.classList.remove('hidden'); }
     };
     reader.readAsDataURL(file);
   }
@@ -1041,28 +1059,52 @@ async function submitAll() {
     const res = await api({ action: 'submitSupply', courseCode: course.courseCode, items: payload });
     if (!res.ok) { showAddAlert(res.msg, 'err'); return; }
 
-    // 견적서 이미지 업로드 (행 번호를 직접 전달해 확실하게 기록)
-    const rowIds = res.rowIds || [];
-    const rowNums = res.rowNums || {};
+    const rowIds    = res.rowIds    || [];
+    const rowNums   = res.rowNums   || {};
     const urlColIdx = res.urlColIdx || 0;
-    const estItems = items.filter((item, idx) => item.purchaseType === '견적서' && item._card.querySelector('input[type=file]')?.files[0]);
+
+    // ── 제출된 품목을 클라이언트 supplies 배열에 먼저 추가 ──
+    const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    const newSupplies = items.map((item, idx) => ({
+      rowId:        rowIds[idx],
+      itemName:     item.itemName,
+      qty:          item.qty,
+      unitPrice:    item.unitPrice,
+      subTotal:     item.qty * item.unitPrice,
+      shipping:     item.shipping,
+      totalPrice:   item.qty * item.unitPrice + item.shipping,
+      purchaseType: item.purchaseType,
+      link:         item.link || '',
+      estimateUrl:  '',   // 업로드 후 채워짐
+      note:         item.note || '',
+      status:       '검토전',
+      submittedAt:  now,
+    }));
+    supplies = [...supplies, ...newSupplies];
+
+    // ── 견적서 업로드 → 성공 시 클라이언트 배열에 URL 직접 기록 ──
+    const estItems = items.filter((item, idx) =>
+      item.purchaseType === '견적서' && item._card.querySelector('input[type=file]')?.files[0]
+    );
     if (estItems.length > 0) {
       updateOverlay('견적서 이미지 업로드 중...', `견적서 ${estItems.length}개를 Drive에 저장합니다.\n파일 크기에 따라 시간이 걸릴 수 있습니다.`);
     }
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
-      if (item.purchaseType === '견적서') {
-        const fileInput = item._card.querySelector('input[type=file]');
-        if (fileInput && fileInput.files[0]) {
-          await uploadEstimate(rowIds[idx], fileInput.files[0], rowNums[rowIds[idx]], urlColIdx);
-        }
+      if (item.purchaseType !== '견적서') continue;
+      const fileInput = item._card.querySelector('input[type=file]');
+      if (!fileInput || !fileInput.files[0]) continue;
+      try {
+        const url = await uploadEstimate(rowIds[idx], fileInput.files[0], rowNums[rowIds[idx]], urlColIdx);
+        // 클라이언트 supplies 배열에 URL 바로 반영
+        const target = supplies.find(s => s.rowId === rowIds[idx]);
+        if (target && url) target.estimateUrl = url;
+      } catch(uploadErr) {
+        console.error('견적서 업로드 실패:', uploadErr);
       }
     }
 
-    // 갱신
-    updateOverlay('화면 갱신 중...', '최신 신청 현황을 불러옵니다.');
-    const refreshed = await api({ action: 'getCourse', courseCode: course.courseCode });
-    if (refreshed.ok) { course = refreshed.course; supplies = refreshed.supplies || []; }
+    // ── 화면 갱신 (서버 재조회 없이 클라이언트 데이터로 바로 렌더) ──
     document.getElementById('itemsContainer').innerHTML = '';
     itemCount = 0; addItem();
     renderSupplyList(); renderBudget();
@@ -1073,12 +1115,12 @@ async function submitAll() {
 }
 
 async function uploadEstimate(rowId, file, rowNum, urlColIdx) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async e => {
       const base64 = e.target.result.split(',')[1];
       try {
-        await api({
+        const res = await api({
           action: 'uploadEstimate',
           courseCode: course.courseCode,
           rowId, rowNum, urlColIdx,
@@ -1086,9 +1128,11 @@ async function uploadEstimate(rowId, file, rowNum, urlColIdx) {
           base64Data: base64,
           mimeType: file.type,
         });
-      } catch(e) {}
-      resolve();
+        if (res && res.ok) resolve(res.url);
+        else reject(new Error(res?.msg || '업로드 실패'));
+      } catch(e) { reject(e); }
     };
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
     reader.readAsDataURL(file);
   });
 }
