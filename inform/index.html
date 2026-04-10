@@ -197,9 +197,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--tex
 .day-badge.sat{background:#1a5276}.day-badge.sun{background:#922b21}
 .time-range{font-weight:600;color:var(--navy)}
 .sess-cnt{background:var(--sky);color:var(--navy);font-size:10px;font-weight:700;
-  padding:2px 7px;border-radius:10px}
+  padding:2px 7px;border-radius:10px;white-space:nowrap}
 .total-row td{background:#f0f4ff!important;font-weight:700;color:var(--navy);
-  font-size:12px;border-top:2px solid var(--navy)}
+  font-size:12px;border-top:2px solid var(--navy);white-space:nowrap}
 .stable{width:100%;border-collapse:collapse;font-size:12px}
 .stable th{background:var(--navy);color:#fff;padding:6px 8px;text-align:left;font-weight:600;font-size:11px}
 .stable td{padding:6px 8px;border-bottom:1px solid var(--g100)}
@@ -359,7 +359,7 @@ function buildScheduleHTML(schedule) {
   return `<div style="overflow-x:auto"><table class="sched-table">
     <thead><tr>
       <th style="width:36px">요일</th><th style="width:68px">날짜</th>
-      <th>수업 시간</th><th style="width:54px">차시</th>
+      <th style="width:140px">수업 시간</th><th style="width:80px;white-space:nowrap">차시</th>
     </tr></thead>
     <tbody>${rows}
       <tr class="total-row">
