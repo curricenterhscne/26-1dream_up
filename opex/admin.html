@@ -823,11 +823,38 @@ function driveImgUrl(url) {
 }
 
 // 강좌별 신청서 미리보기 (첨부 이미지와 동일한 양식)
-function previewSheet() {
+async function previewSheet() {
   const code = document.getElementById('exportCourseSelect').value;
   if (!code) { alert('강좌를 선택해주세요.'); return; }
   const c = allCourses.find(x => String(x.courseCode).toUpperCase() === code.toUpperCase());
   if (!c) return;
+
+  // 💡 [추가된 로직] 상세 데이터(준비물, 배송지)가 로컬에 없다면 서버에서 불러오기
+  if (!c.supplies) {
+    showOverlay('상세 정보 불러오는 중...', '신청서 데이터를 가져옵니다.');
+    try {
+      const key = role === 'admin' ? { adminKey: loginCode }
+                : role === 'vendor' ? { vendorKey: loginCode }
+                : { univCode: loginCode };
+      const res = await api({ action: 'getCourseDetail', courseCode: code, ...key });
+      if (res.ok) {
+        c.supplies   = res.supplies || [];
+        c.delivery   = res.delivery || null;
+        c.totalCost  = res.totalCost || 0;
+        c.hasDelivery = !!res.delivery;
+      } else {
+        hideOverlay();
+        alert('상세 정보를 불러오지 못했습니다: ' + res.msg);
+        return;
+      }
+    } catch(e) {
+      hideOverlay();
+      alert('서버 오류가 발생했습니다.');
+      return;
+    }
+    hideOverlay();
+  }
+
   const d = c.delivery || {};
 
   let supplyRows = '';
@@ -905,6 +932,7 @@ function previewSheet() {
     </div>
   `;
 }
+
 
 function printSheet() {
   const content = document.getElementById('sheetPreview');
