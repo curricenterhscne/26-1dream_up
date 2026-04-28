@@ -296,6 +296,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
           </select>
           <button class="btn btn-accent" onclick="previewSheet()">미리보기</button>
           <button class="btn btn-ok" onclick="printSheet()">🖨 인쇄</button>
+          <button class="btn btn-ok" onclick="printAllSheets()" style="background:#047857;">🖨 전체 일괄 인쇄</button>
           <button class="btn btn-ghost" onclick="exportAllSheets()">전체 강좌 일괄 CSV</button>
         </div>
         <div id="sheetPreview"></div>
@@ -984,6 +985,173 @@ ${content.innerHTML}
   win.document.close();
 }
 
+// 전체 강좌 신청서 일괄 출력
+async function printAllSheets() {
+  // 1. 준비물이 필요한 '개설확정' 및 '개설예정' 강좌만 필터링 (폐강, 해당없음 제외)
+  const targetCourses = allCourses.filter(c => !c.noSupply && c.status !== '폐강');
+  if (targetCourses.length === 0) {
+    alert('출력할 대상 강좌가 없습니다.');
+    return;
+  }
+
+  showOverlay('전체 일괄 출력 준비 중...', `총 ${targetCourses.length}개 강좌의 데이터를 하나로 묶고 있습니다.\n강좌 수에 따라 최대 1~2분 정도 소요될 수 있습니다.`);
+
+  let allHtml = '';
+
+  // 2. 강좌별로 돌면서 상세 데이터가 없으면 서버에서 가져온 뒤 HTML 합치기
+  for (let i = 0; i < targetCourses.length; i++) {
+    const c = targetCourses[i];
+    
+    // 진행 상황 안내 업데이트
+    document.getElementById('ovSub').textContent = `데이터 불러오는 중... (${i + 1} / ${targetCourses.length})\n[${c.courseCode}] ${c.courseName}`;
+
+    if (!c.supplies) {
+      try {
+        const key = role === 'admin' ? { adminKey: loginCode }
+                  : role === 'vendor' ? { vendorKey: loginCode }
+                  : { univCode: loginCode };
+        const res = await api({ action: 'getCourseDetail', courseCode: c.courseCode, ...key });
+        if (res.ok) {
+          c.supplies   = res.supplies || [];
+          c.delivery   = res.delivery || null;
+          c.totalCost  = res.totalCost || 0;
+          c.hasDelivery = !!res.delivery;
+        }
+      } catch (e) {
+        console.error(c.courseCode, '데이터 로드 실패');
+      }
+    }
+
+    // 3. 개별 강좌 HTML 생성
+    const d = c.delivery || {};
+    let supplyRows = '';
+    let totalAmt = 0;
+
+    if (!c.supplies || !c.supplies.length) {
+      supplyRows = `<tr><td class="left" colspan="6">미신청</td></tr>`;
+    } else {
+      c.supplies.forEach((s, idx) => {
+        const sub = Number(s.subTotal) || 0;
+        const ship = Number(s.shipping) || 0;
+        const total = sub + ship;
+        totalAmt += total;
+        const linkCell = s.purchaseType === '견적서'
+          ? (s.estimateUrl ? `<a href="${esc(s.estimateUrl)}" target="_blank">견적서 보기</a>` : '견적서 첨부')
+          : (s.link ? `<a href="${esc(s.link)}" target="_blank">링크</a>` : '-');
+        supplyRows += `
+          <tr>
+            <td class="center">${idx + 1}</td>
+            <td class="left">${esc(s.itemName)}${s.note?`<br><small>${esc(s.note)}</small>`:''}</td>
+            <td class="left">${linkCell}</td>
+            <td>${s.qty}개 × ${fmt(s.unitPrice)}원 = ${fmt(sub)}원<br><small>배송비 ${fmt(ship)}원</small></td>
+            <td>${fmt(sub)}</td>
+            <td>${fmt(ship)}</td>
+            <td>${fmt(total)}</td>
+          </tr>`;
+      });
+    }
+
+    const estimateImgs = (c.supplies || []).filter(s => s.purchaseType === '견적서' && s.estimateUrl)
+      .map(s => {
+        const imgUrl = driveImgUrl(s.estimateUrl);
+        return `
+          <div style="margin-bottom:16px; page-break-inside: avoid;">
+            <div style="font-weight:700;margin-bottom:6px">${esc(s.itemName)}</div>
+            <img class="vs-est-img" src="${imgUrl}"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
+              style="max-width:100%;border:1px solid #ddd;border-radius:4px;display:block">
+          </div>`;
+      }).join('');
+
+    // 생성된 각 강좌의 HTML을 전체 HTML 문자열에 누적 (page-break-after: always로 A4 장 분리)
+    allHtml += `
+      <div class="vendor-sheet">
+        <div class="vs-title">대학연계 참학력 공동교육과정 수업운영비 신청서(2026년 1학기)</div>
+        <table class="vs-info-table">
+          <tr>
+            <td class="lbl-cell">대학명</td><td>${esc(c.univName)}</td>
+            <td class="lbl-cell">배송지</td><td>${esc(d.address||'')} ${esc(d.building||'')}</td>
+          </tr>
+          <tr>
+            <td class="lbl-cell">강의명</td><td>${esc(c.courseName)}</td>
+            <td class="lbl-cell">수령인명</td><td>${esc(d.recipient||'')} (${esc(d.phone||'')})</td>
+          </tr>
+        </table>
+
+        <table class="vs-table">
+          <thead>
+            <tr>
+              <th style="width:30px">순</th><th>품명</th><th>준비물 링크/견적</th>
+              <th>산출내역</th><th>소계(A)</th><th>배송비(B)</th><th>합계(A+B)</th>
+            </tr>
+          </thead>
+          <tbody>${supplyRows}</tbody>
+        </table>
+        ${c.supplies && c.supplies.length ? `<div class="vs-total">총합계: ${fmt(totalAmt)}원</div>` : ''}
+
+        ${estimateImgs ? `<div class="vs-est">견적서(이미지 첨부)</div>${estimateImgs}` : ''}
+      </div>
+    `;
+  }
+
+  hideOverlay();
+
+  // 4. 합쳐진 전체 HTML을 새 인쇄용 창에 띄우기
+  const win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>전체 수업운영비 신청서 일괄 출력</title>
+<style>
+  body { font-family: 'Noto Sans KR', sans-serif; margin: 20px; color: #000; }
+  .vendor-sheet { max-width: 700px; margin: 0 auto 50px; }
+  .vs-title { text-align:center; font-size:15px; font-weight:700; margin-bottom:12px; }
+  .vs-info-table { width:100%; border-collapse:collapse; margin-bottom:12px; font-size:12px; }
+  .vs-info-table td { padding:5px 10px; border:1px solid #999; }
+  .vs-info-table .lbl-cell { background:#f0f0f0; font-weight:500; width:80px; }
+  .vs-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:8px; }
+  .vs-table th { background:#e8eaf6; padding:6px 8px; border:1px solid #999; text-align:center; font-weight:700; }
+  .vs-table td { padding:5px 8px; border:1px solid #999; text-align:right; }
+  .vs-table td.left { text-align:left; }
+  .vs-table td.center { text-align:center; }
+  .vs-total { text-align:right; font-size:13px; font-weight:700; margin-top:6px; }
+  .vs-est { margin-top:14px; font-size:12px; font-weight:700; }
+  .vs-est-img { max-width:100%; margin-top:8px; border:1px solid #ddd; border-radius:4px; display:block; }
+  a { color:#1a56db; text-decoration: none; }
+  
+  /* 인쇄 시 설정 */
+  @media print {
+    body { margin: 0; }
+    /* 각 강좌마다 A4 한 페이지를 넘기도록 강제 분리 */
+    .vendor-sheet { page-break-after: always; margin: 0 auto; }
+    /* 맨 마지막 강좌 인쇄 후 불필요한 빈 페이지 출력 방지 */
+    .vendor-sheet:last-child { page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+${allHtml}
+<script>
+  // 이미지 로딩 완료 후 자동 인쇄 창 띄우기
+  const imgs = document.querySelectorAll('img');
+  if (imgs.length === 0) {
+    window.print();
+  } else {
+    let loaded = 0;
+    imgs.forEach(img => {
+      if (img.complete) { loaded++; if (loaded === imgs.length) window.print(); }
+      else {
+        img.onload = img.onerror = () => { loaded++; if (loaded === imgs.length) window.print(); };
+      }
+    });
+  }
+</script>
+</body>
+</html>`);
+  win.document.close();
+}
+  
 async function exportAllSheets() {
   alert('일괄 CSV 내보내기를 시작합니다. 잠시 기다려주세요.');
   await exportCsv('all');
