@@ -189,7 +189,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </head>
 <body>
 
-<!-- 전체화면 로딩 오버레이 -->
 <div class="overlay hidden" id="overlay">
   <div class="spin-lg"></div>
   <div class="ov-title" id="ovTitle">처리 중...</div>
@@ -198,7 +197,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <div class="ov-note">※ Google Sheets 연동으로 인해 10~20초 소요될 수 있습니다</div>
 </div>
 
-<!-- ── 로그인 ────────────────────────────────────── -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <h1>꿈키움 준비물 관리</h1>
@@ -222,7 +220,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
-<!-- ── 앱 ─────────────────────────────────────────── -->
 <div class="app" id="app">
   <div class="sidebar">
     <div class="logo">
@@ -242,14 +239,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="spin"></div> 데이터 불러오는 중...
     </div>
 
-    <!-- 대시보드 -->
     <div id="pageDash" class="hidden">
       <div class="ph"><h2>대시보드</h2><p id="dashDesc"></p></div>
       <div class="stat-row" id="statRow"></div>
       <div class="card"><div class="sec-title">주의 필요 강좌</div><div id="alertCourses"></div></div>
     </div>
 
-    <!-- 강좌 현황 -->
     <div id="pageCourses" class="hidden">
       <div class="ph"><h2>강좌별 현황</h2><p>강좌를 클릭하면 상세 내용을 확인하고 관리할 수 있습니다</p></div>
       <div class="filter-bar">
@@ -274,7 +269,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div id="courseList"></div>
     </div>
 
-    <!-- 내보내기 -->
     <div id="pageExport" class="hidden">
       <div class="ph"><h2>데이터 내보내기</h2><p>용역업체 전달용 자료를 준비합니다</p></div>
 
@@ -565,7 +559,6 @@ function buildCard(c) {
         <span class="chevron">▾</span>
       </div>
       <div class="cc-detail" id="det_${c.courseCode}">
-        <!-- 카드 열 때 lazy load -->
         <div id="det_inner_${c.courseCode}">
           <div style="text-align:center;padding:20px;color:var(--sub);font-size:13px">
             <div class="spin" style="display:inline-block;margin-bottom:6px"></div><br>상세 정보 불러오는 중...
@@ -934,7 +927,6 @@ async function previewSheet() {
   `;
 }
 
-
 function printSheet() {
   const content = document.getElementById('sheetPreview');
   if (!content || !content.innerHTML.trim()) { alert('먼저 강좌를 선택하고 미리보기를 눌러주세요.'); return; }
@@ -1146,7 +1138,7 @@ ${allHtml}
       }
     });
   }
-</script>
+<\/script>
 </body>
 </html>`);
   win.document.close();
